@@ -36,8 +36,17 @@ static __always_inline void boot_init_stack_canary(void)
 	canary &= CANARY_MASK;
 
 	current->stack_canary = canary;
-	if (!IS_ENABLED(CONFIG_STACKPROTECTOR_PER_TASK))
-		__stack_chk_guard = current->stack_canary;
+	/*
+	 * The per-task/sysreg stack guard (CONFIG_STACKPROTECTOR_PER_TASK)
+	 * lets the compiler obtain the canary from current->stack_canary via
+	 * sp_el0 and never references __stack_chk_guard.  Keep the global
+	 * __stack_chk_guard exported and boot-randomized anyway: it is part of
+	 * the GKI ABI/KMI and is referenced by loadable modules that use the
+	 * classic global-canary mechanism.  Setting it once, early, to the same
+	 * value as the initial task canary preserves the non-per-task semantics
+	 * while keeping per-task protection untouched.
+	 */
+	__stack_chk_guard = canary;
 #endif
 	ptrauth_thread_init_kernel(current);
 	ptrauth_thread_switch_kernel(current);
