@@ -2159,13 +2159,15 @@ static void zram_reset_device(struct zram *zram)
 	}
 
 	/*
-	 * Snapshot all active comp streams before releasing the lock,
-	 * mirroring the existing single-comp early-unlock pattern: don't
-	 * hold init_lock across the slow zcomp_destroy / zram_meta_free /
-	 * reset_bdev teardown below.
+	 * Snapshot and detach all active comp streams before releasing
+	 * the lock, mirroring the existing single-comp early-unlock
+	 * pattern: don't hold init_lock across the slow zcomp_destroy /
+	 * zram_meta_free / reset_bdev teardown below.
 	 */
-	for (prio = 0; prio < ZRAM_MAX_COMPS; prio++)
+	for (prio = 0; prio < ZRAM_MAX_COMPS; prio++) {
 		comp[prio] = zram->comps[prio];
+		zram->comps[prio] = NULL;
+	}
 	disksize = zram->disksize;
 	zram->disksize = 0;
 
