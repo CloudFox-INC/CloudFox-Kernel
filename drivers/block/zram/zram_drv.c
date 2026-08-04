@@ -370,6 +370,14 @@ static ssize_t writeback_limit_store(struct device *dev,
 	if (kstrtoull(buf, 10, &val))
 		return ret;
 
+	/*
+	 * When the page size is greater than 4KB, if bd_wb_limit is set to
+	 * a value that is not page-size aligned, a single writeback operation
+	 * will underflow the limit (which is measured in 4KB units). Round it
+	 * down to an integer multiple of PAGE_SIZE / 4096.
+	 */
+	val = rounddown(val, PAGE_SIZE / 4096);
+
 	down_read(&zram->init_lock);
 	spin_lock(&zram->wb_limit_lock);
 	zram->bd_wb_limit = val;
