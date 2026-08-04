@@ -231,7 +231,7 @@ gen_btf()
 		return 1
 	fi
 
-	vmlinux_link ${1}
+	vmlinux_link ${1} ${builtin_names_o}
 
 	info "BTF" ${2}
 	LLVM_OBJCOPY="${OBJCOPY}" ${PAHOLE} -J ${PAHOLE_FLAGS} ${1}
@@ -291,7 +291,7 @@ kallsyms_step()
 	kallsymso=${kallsyms_vmlinux}.o
 	kallsyms_S=${kallsyms_vmlinux}.S
 
-	vmlinux_link ${kallsyms_vmlinux} "${kallsymso_prev}" ${btf_vmlinux_bin_o}
+	vmlinux_link ${kallsyms_vmlinux} "${kallsymso_prev}" ${btf_vmlinux_bin_o} ${builtin_names_o}
 	kallsyms ${kallsyms_vmlinux} ${kallsyms_S}
 
 	info AS ${kallsymso}
@@ -324,6 +324,7 @@ cleanup()
 	rm -f System.map
 	rm -f vmlinux
 	rm -f vmlinux.o
+	rm -f builtin-modules.names builtin-modules.S .builtin-modules.o
 }
 
 on_exit()
@@ -378,9 +379,40 @@ ${MAKE} -f "${srctree}/scripts/Makefile.modpost" MODPOST_VMLINUX=1
 info MODINFO modules.builtin.modinfo
 ${OBJCOPY} -j .modinfo -O binary vmlinux.o modules.builtin.modinfo
 info GEN modules.builtin
-# The second line aids cases where multiple modules share the same object.
+# The second line (below) aids cases where multiple modules share the same object.
 tr '\0' '\n' < modules.builtin.modinfo | sed -n 's/^[[:alnum:]:_]*\.file=//p' |
 	tr ' ' '\n' | uniq | sed -e 's:^:kernel/:' -e 's/$/.ko/' > modules.builtin
+
+builtin_names_o=""
+if [ -n "${CONFIG_MODULE_SKIP_BUILTIN}" ]; then
+	# Skipping the load of redundant .ko files relies on knowing which
+	# module names this kernel has built in.  Generate that name set from
+	# the very same metadata used for modules.builtin above: the name is
+	# the directory basename with the ".ko" suffix dropped and "-" mangled
+	# to "_" exactly as kbuild's name-fix does (scripts/Makefile.lib).
+	info GEN builtin-modules.names
+	tr '\0' '\n' < modules.builtin.modinfo | sed -n 's/^[[:alnum:]:_]*\.file=//p' |
+		tr ' ' '\n' | uniq |
+		sed -n 's:.*/::; s/\.ko$//; s/-/_/g; p' |
+		sort -u > builtin-modules.names
+
+	# Emit the NUL-separated name list as an assembly data blob; it is
+	# linked into vmlinux as .builtin-modules.names and scanned by
+	# module.c's module_builtin_name() helper.
+	info GEN builtin-modules.S
+	( echo '.section .rodata,"a"';
+	  echo '.globl __module_builtin_names';
+	  echo '__module_builtin_names:';
+	  sed 's/\(.*\)/	.asciz	"\1"/' builtin-modules.names;
+	  echo '	.globl __module_builtin_names_end';
+	  echo '__module_builtin_names_end:' ) > builtin-modules.S
+
+	builtin_names_o=".builtin-modules.o"
+	info AS builtin-modules
+	${CC} ${NOSTDINC_FLAGS} ${LINUXINCLUDE} ${KBUILD_CPPFLAGS} \
+	      ${KBUILD_AFLAGS} ${KBUILD_AFLAGS_KERNEL} \
+	      -c -o ${builtin_names_o} builtin-modules.S
+fi
 
 btf_vmlinux_bin_o=""
 if [ -n "${CONFIG_DEBUG_INFO_BTF}" ]; then
@@ -432,7 +464,7 @@ if [ -n "${CONFIG_KALLSYMS}" ]; then
 	fi
 fi
 
-vmlinux_link vmlinux "${kallsymso}" ${btf_vmlinux_bin_o}
+vmlinux_link vmlinux "${kallsymso}" ${btf_vmlinux_bin_o} ${builtin_names_o}
 
 # fill in BTF IDs
 if [ -n "${CONFIG_DEBUG_INFO_BTF}" -a -n "${CONFIG_BPF}" ]; then

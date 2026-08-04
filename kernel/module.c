@@ -60,6 +60,26 @@
 #include <uapi/linux/module.h>
 #include "module-internal.h"
 
+#ifdef CONFIG_MODULE_SKIP_BUILTIN
+/*
+ * Is @module_name compiled into this kernel?  Only used as a compatibility
+ * shim behind CONFIG_MODULE_SKIP_BUILTIN; the __module_builtin_names
+ * blob is declared in module-internal.h.
+ */
+static bool module_builtin_name(const char *module_name)
+{
+	const char *p;
+	size_t n = strlen(module_name);
+
+	for (p = __module_builtin_names;
+	     p < __module_builtin_names_end; p += strlen(p) + 1) {
+		if (strlen(p) == n && !memcmp(p, module_name, n))
+			return true;
+	}
+	return false;
+}
+#endif
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/module.h>
 
@@ -4026,6 +4046,25 @@ static int load_module(struct load_info *info, const char __user *uargs,
 		pr_err("Module %s is blacklisted\n", info->name);
 		goto free_copy;
 	}
+
+#ifdef CONFIG_MODULE_SKIP_BUILTIN
+	/*
+	 * Compatibility shim for loaders that insist on insmod'ing a .ko
+	 * for a driver that is already built into this kernel.  Report
+	 * success and never run the module's init code; the functionality
+	 * is already available in vmlinux.  This is *not* normal module
+	 * loader semantics, so it is gated behind CONFIG_MODULE_SKIP_BUILTIN
+	 * and only ever triggers for names present in the build-time
+	 * generated built-in module table.  Genuine load failures for any
+	 * other module are unaffected.
+	 */
+	if (module_builtin_name(info->name)) {
+		pr_info("Module %s already built into the kernel, skipping load\n",
+			info->name);
+		err = 0;
+		goto free_copy;
+	}
+#endif
 
 	err = rewrite_section_headers(info, flags);
 	if (err)

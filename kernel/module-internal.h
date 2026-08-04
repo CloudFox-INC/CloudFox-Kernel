@@ -29,3 +29,12 @@ struct load_info {
 };
 
 extern int mod_verify_sig(const void *mod, struct load_info *info);
+
+#ifdef CONFIG_MODULE_SKIP_BUILTIN
+/*
+ * NUL-separated list of module names compiled into vmlinux, generated
+ * by scripts/link-vmlinux.sh and linked in as a data blob.
+ */
+extern const char __module_builtin_names[];
+extern const char __module_builtin_names_end[];
+#endif
