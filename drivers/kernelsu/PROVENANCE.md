@@ -12,6 +12,8 @@ an optional, **disabled-by-default** Kconfig driver (`CONFIG_KSU`).
   - date: Wed Jul 29 11:28:05 2026 +0800
   - subject: `manager: translation squash`
   - branch: `master`
+- Upstream rev-list count: `2605` (`git rev-list --count 72bd84056` == `2605`)
+- Authoritative pinned `KSU_VERSION`: `32605` (`30000 + 2605`)
 - Imported trees (byte-for-byte from that commit):
   - `kernel/` -> `drivers/kernelsu/kernel/`
   - `uapi/` -> `drivers/kernelsu/uapi/`
@@ -80,6 +82,37 @@ exactly **13 files** (verified with `git diff --name-status`):
    - When `CONFIG_KSU` is unset (default), the `obj-` line is empty, so
      `drivers/kernelsu/kernel/` is never entered — nothing from KernelSU is
      compiled or linked.
+4. **`drivers/kernelsu/kernel/Kbuild`** — vendored version resolution, exactly
+   this precedence:
+   1. Explicit externally supplied `KSU_VERSION` (integrator override) —
+      highest priority. Not silently replaced by a Git-derived value.
+   2. Genuine valid XXKSU Git-derived version: `30000 + git rev-list --count
+      HEAD`. Gated by the existing `KSU_GIT_VERSION_VALID` mechanism, which is
+      only set when the KSU tree is a separate, genuine upstream checkout
+      distinct from the kernel (preserves standalone XXKSU builds).
+   3. Deterministic vendored fallback `32605` for vendored / non-Git /
+      shallow / tarball / AOSP builds — pinned to the imported upstream
+      snapshot (`30000 + 2605`). Replaces the upstream non-Git fallback
+      (`16`) and never inspects CloudFox commit history.
+   - `ccflags-y += -DKSU_VERSION=$(KSU_VERSION)` is emitted once for whichever
+     branch applies; version handling does not depend on the builder and does
+     not touch `CONFIG_KSU`.
+
+## Tree delta (CloudFox integration deltas)
+
+This vendored tree is **not** byte-identical to the imported upstream snapshot.
+It is `KOWX712/KernelSU@72bd84056` with documented CloudFox integration deltas:
+
+- `kernel/Kconfig`: upstream default KSU setting changed from `y` to `n`.
+- `kernel/Kbuild`: vendoring adaptation of version resolution (see
+  "Integration-only changes made here", item 4):
+  - explicit `KSU_VERSION` override;
+  - genuine upstream XXKSU Git auto-detection retained;
+  - pinned fallback `32605` for vendored / non-Git builds.
+- Repo-root integration: `drivers/Kconfig` and `drivers/Makefile` gain the
+  `CONFIG_KSU` source/obj lines (items 2-3 above).
+
+All other imported files are byte-for-byte the upstream revision.
 
 No defconfig, device defconfig, fragment, DBGONFIG, or other configuration has
 `CONFIG_KSU` set.
