@@ -42,7 +42,7 @@
 #define ZRAM_FLAG_SHIFT 24
 
 /* Only 2 bits are allowed for comp priority index */
-#define ZRAM_COMP_PRIORITY_MASK	0x3
+#define ZRAM_COMP_PRIORITY_MASK	0x3UL
 
 /* Flags for zram pages (table[page_no].flags) */
 enum zram_pageflags {
