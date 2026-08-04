@@ -570,7 +570,7 @@ static void HUF_fillDTableX2Level2(HUF_DEltX2* DTable, U32 sizeLog, const U32 co
 
 static void HUF_fillDTableX2(HUF_DEltX2* DTable, const U32 targetLog,
                            const sortedSymbol_t* sortedList, const U32 sortedListSize,
-                           const U32* rankStart, rankVal_t rankValOrigin, const U32 maxWeight,
+                           const U32* rankStart, rankValCol_t *rankValOrigin, const U32 maxWeight,
                            const U32 nbBitsBaseline, U32* wksp, size_t wkspSize)
 {
     U32* rankVal = wksp;
