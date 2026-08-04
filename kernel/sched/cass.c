@@ -279,12 +279,5 @@ static int cass_select_task_rq_fair(struct task_struct *p, int prev_cpu,
 
 	sync = (wake_flags & WF_SYNC) && !(current->flags & PF_EXITING);
 
-#ifdef CONFIG_SCHED_PREFER_SILVER
-	if (prefer_silver_check_task_util(p)) {
-		int silver_cpu = find_best_silver_cpu(p);
-		if (silver_cpu >= 0)
-			return silver_cpu;
-	}
-#endif
 	return cass_best_cpu(p, prev_cpu, sync);
 }
