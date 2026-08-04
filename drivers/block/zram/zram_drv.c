@@ -2248,9 +2248,12 @@ static void zram_destroy_comps(struct zram *zram)
 	}
 
 	/*
-	 * Free secondary algorithms names.
+	 * Free secondary algorithms names. Do not free statically defined
+	 * compression algorithms (default_compressor).
 	 */
 	for (prio = ZRAM_SECONDARY_COMP; prio < ZRAM_MAX_COMPS; prio++) {
+		if (zram->comp_algs[prio] == default_compressor)
+			continue;
 		kfree(zram->comp_algs[prio]);
 		zram->comp_algs[prio] = NULL;
 	}
@@ -2289,6 +2292,8 @@ static void zram_reset_device(struct zram *zram)
 	part_stat_set_all(&zram->disk->part0, 0);
 
 	for (prio = ZRAM_SECONDARY_COMP; prio < ZRAM_MAX_COMPS; prio++) {
+		if (zram->comp_algs[prio] == default_compressor)
+			continue;
 		kfree(zram->comp_algs[prio]);
 		zram->comp_algs[prio] = NULL;
 	}
