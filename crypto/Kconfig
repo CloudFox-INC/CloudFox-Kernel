@@ -1826,6 +1826,31 @@ config CRYPTO_LZ4HC
 	help
 	  This is the LZ4 high compression mode algorithm.
 
+config CRYPTO_LZ4KDR
+	tristate "LZ4KDR compression algorithm"
+	select CRYPTO_ALGAPI
+	select LZ4KDR_COMPRESS
+	select LZ4KDR_DECOMPRESS
+	help
+	  LZ4KDR is a speed-tuned derivative of Huawei's LZ4KD, a
+	  zram-oriented LZ4 variant wire-compatible with the original
+	  LZ4KD encoding. This driver registers the legacy
+	  CRYPTO_ALG_TYPE_COMPRESS interface used by zram's zcomp.
+	  See include/linux/lz4kdr.h for the attribution note.
+
+config CRYPTO_LZ4KD
+	tristate "LZ4KD compression algorithm"
+	select CRYPTO_ALGAPI
+	select LZ4KD_COMPRESS
+	select LZ4KD_DECOMPRESS
+	help
+	  LZ4KD is Huawei's zram-oriented LZ4 variant with delta
+	  compression support, imported verbatim from the Huawei P50
+	  (ABR-AL60) HarmonyOS 4.0.0 kernel open source release.
+	  This driver registers the legacy CRYPTO_ALG_TYPE_COMPRESS
+	  interface used by zram's zcomp.
+	  See include/linux/lz4kd.h for the algorithm documentation.
+
 config CRYPTO_ZSTD
 	tristate "Zstd compression algorithm"
 	select CRYPTO_ALGAPI

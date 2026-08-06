@@ -14,6 +14,47 @@ config ZRAM
 
 	  See Documentation/admin-guide/blockdev/zram.rst for more information.
 
+choice
+	prompt "Default compression algorithm"
+	depends on ZRAM
+	default ZRAM_DEF_COMP_LZO_RLE
+	help
+	  Select the compression algorithm used by zram by default.
+	  The chosen algorithm must also be built (see CRYPTO_* options).
+	  lzo-rle is the safe default; old defconfigs that predate these
+	  options therefore fall back to lzo-rle at config time.
+
+config ZRAM_DEF_COMP_LZO_RLE
+	bool "lzo-rle"
+	help
+	  LZO-RLE compression (the historical default).
+
+config ZRAM_DEF_COMP_LZ4KD
+	bool "lz4kd"
+	select CRYPTO_LZ4KD
+	help
+	  Huawei LZ4KD compression.
+
+config ZRAM_DEF_COMP_LZ4KDR
+	bool "lz4kdr"
+	select CRYPTO_LZ4KDR
+	help
+	  LZ4KDR, a speed-tuned derivative of LZ4KD.
+
+endchoice
+
+config ZRAM_DEF_COMP
+	string
+	depends on ZRAM
+	default "lzo-rle" if ZRAM_DEF_COMP_LZO_RLE
+	default "lz4kd" if ZRAM_DEF_COMP_LZ4KD
+	default "lz4kdr" if ZRAM_DEF_COMP_LZ4KDR
+	default "lzo-rle"
+	help
+	  The selected default compressor name, consumed by the zram driver.
+	  Falls back to "lzo-rle" if no ZRAM_DEF_COMP_* option is selected
+	  (e.g. an older defconfig that predates these options).
+
 config ZRAM_WRITEBACK
        bool "Write back incompressible or idle page to backing device"
        depends on ZRAM
