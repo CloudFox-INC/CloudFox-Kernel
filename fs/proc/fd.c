@@ -171,23 +171,16 @@ static const struct dentry_operations tid_fd_dentry_operations = {
 static int proc_fd_link(struct dentry *dentry, struct path *path,
 			struct task_struct *task)
 {
-	struct files_struct *files = NULL;
 	int ret = -ENOENT;
 	unsigned int fd = proc_fd(d_inode(dentry));
 	struct file *fd_file;
 
-	files = get_files_struct(task);
-
-	if (files) {
-		spin_lock(&files->file_lock);
-		fd_file = fcheck_files(files, fd);
-		if (fd_file) {
-			*path = fd_file->f_path;
-			path_get(&fd_file->f_path);
-			ret = 0;
-		}
-		spin_unlock(&files->file_lock);
-		put_files_struct(files);
+	fd_file = fget_task(task, fd);
+	if (fd_file) {
+		*path = fd_file->f_path;
+		path_get(&fd_file->f_path);
+		ret = 0;
+		fput(fd_file);
 	}
 
 	return ret;
