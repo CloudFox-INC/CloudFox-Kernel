@@ -2475,6 +2475,16 @@ static void get_scan_count(struct lruvec *lruvec, struct scan_control *sc,
 	denominator = ap + fp;
 out:
 	trace_android_vh_tune_scan_type((char *)(&scan_balance));
+{
+	/*
+	 * le9uo forward-progress tracking: if every evictable LRU ends
+	 * up zeroed by its hard-protection clamp, reclaim would spin
+	 * without making progress until the OOM killer fires.
+	 */
+	enum lru_list protected_lru = LRU_INACTIVE_FILE;
+	unsigned long protected_size = 0;
+	bool all_protected = true;
+
 	for_each_evictable_lru(lru) {
 		int file = is_file_lru(lru);
 		unsigned long lruvec_size;
@@ -2584,11 +2594,28 @@ out:
 		 * Don't reclaim anon/file pages when the amount is
 		 * below the watermark of the same type.
 		 */
-		if (file ? sc->clean_below_min : sc->anon_below_min)
+		if (file ? sc->clean_below_min : sc->anon_below_min) {
 			scan = 0;
+			if (lruvec_size > protected_size) {
+				protected_size = lruvec_size;
+				protected_lru = lru;
+			}
+		} else {
+			all_protected = false;
+		}
 
 		nr[lru] = scan;
 	}
+
+	/*
+	 * le9uo forward-progress guard: hard-protecting both working
+	 * sets can zero out every scan bucket at once, leaving reclaim
+	 * no way to converge before the OOM killer fires.  Grant a
+	 * minimal burst on the largest protected LRU in that case; the
+	 * working-set floors still hold for every normal reclaim pass.
+	 */
+	if (all_protected)
+		nr[protected_lru] = SWAP_CLUSTER_MAX;
 }
 
 int vm_workingset_protection_update_handler(struct ctl_table *table, int write,
