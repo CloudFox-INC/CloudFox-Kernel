@@ -11602,6 +11602,20 @@ static inline void *select_task_rq_fair_dummy(void)
 	return (void *)select_task_rq_fair;
 }
 #define select_task_rq_fair cass_select_task_rq_fair
+
+/*
+ * CASS bypasses find_energy_efficient_cpu() entirely, so platforms with
+ * an Energy Model lose EAS wakeup placement when this is enabled.  Make
+ * that trade-off visible instead of silent.
+ */
+#ifdef CONFIG_ENERGY_MODEL
+static int __init cass_eas_replacement_notice(void)
+{
+	pr_warn("sched/cass: CASS replaces EAS wakeup placement; energy-aware CPU selection is disabled\n");
+	return 0;
+}
+late_initcall(cass_eas_replacement_notice);
+#endif /* CONFIG_ENERGY_MODEL */
 #endif /* CONFIG_SCHED_CASS */
 
 /*

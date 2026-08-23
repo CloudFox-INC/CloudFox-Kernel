@@ -1239,7 +1239,16 @@ config SCHED_CASS
 	depends on SMP
 	help
 	  This enables the Capacity Aware Superset Scheduler (CASS), which
-	  optimizes runqueue selection of CFS tasks. By using CPU capacity as a
+	  selects wakeup target CPUs from a capacity-aware candidate set
+	  without consulting the Energy Model.
+
+	  Note: on platforms using Energy Aware Scheduling (i.e. with
+	  CONFIG_ENERGY_MODEL enabled), enabling CASS replaces EAS wakeup
+	  placement entirely - energy-aware CPU selection is not performed.
+	  Expect a different performance/power profile on big.LITTLE
+	  systems when this is turned on.
+
+	  CASS optimizes runqueue selection of CFS tasks. By using CPU capacity as a
 	  basis for comparing the relative utilization between different CPUs,
 	  CASS fairly balances load across CPUs of varying capacities. This
 	  results in improved multi-core performance, especially when CPUs are
