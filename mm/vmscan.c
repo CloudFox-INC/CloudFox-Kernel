@@ -2616,6 +2616,7 @@ out:
 	 */
 	if (all_protected)
 		nr[protected_lru] = SWAP_CLUSTER_MAX;
+	}
 }
 
 int vm_workingset_protection_update_handler(struct ctl_table *table, int write,
